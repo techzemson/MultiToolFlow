@@ -101,8 +101,8 @@ export default function Home() {
               onClick={() => setSelectedCategory(category)}
               className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
                 selectedCategory === category
-                  ? 'bg-[#2d3748] text-white shadow-sm dark:bg-white dark:text-gray-900 border border-transparent'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-gray-400 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 border border-transparent scale-105'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-blue-900/20 dark:hover:border-blue-500 dark:hover:text-blue-400 hover:scale-105'
               }`}
             >
               {category}
@@ -133,7 +133,7 @@ export default function Home() {
             {savedReports.map(report => {
               const tool = TOOLS.find(t => t.id === report.toolId);
               return (
-                <div key={report.id} className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col hover:shadow-md transition-shadow">
+                <div key={report.id} className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center text-blue-600 dark:text-blue-400">
                       <FileText className="w-5 h-5 mr-2" />
@@ -161,8 +161,8 @@ export default function Home() {
       {/* Tools Grid */}
       {filteredTools.length === 0 ? (
         <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 border-dashed">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 mb-4">
-            <Search className="w-8 h-8 text-gray-400" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-900/20 mb-4">
+            <Search className="w-8 h-8 text-blue-400" />
           </div>
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No tools found</h3>
           <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
@@ -170,7 +170,7 @@ export default function Home() {
           </p>
           <button 
             onClick={() => { setSearchQuery(''); setSelectedCategory('All'); }}
-            className="mt-6 px-6 py-2 bg-[#2d3748] text-white rounded-full font-medium hover:bg-gray-800 transition-colors"
+            className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors shadow-sm"
           >
             Clear Search
           </button>
@@ -181,13 +181,13 @@ export default function Home() {
             <Link
               key={tool.id}
               to={tool.path}
-              className="group relative bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200 flex flex-col h-full"
+              className="group relative bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-300 flex flex-col h-full hover:-translate-y-1"
             >
               <div className="flex items-center space-x-4 mb-4">
-                <div className="flex-shrink-0 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl group-hover:bg-[#2d3748] group-hover:text-white text-[#2d3748] dark:text-gray-200 transition-colors duration-200">
+                <div className="flex-shrink-0 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl group-hover:bg-blue-600 group-hover:text-white text-blue-600 dark:text-blue-400 transition-colors duration-300">
                   <tool.icon className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-[#2d3748] dark:group-hover:text-gray-200 transition-colors duration-200">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
                   {tool.name}
                 </h3>
               </div>

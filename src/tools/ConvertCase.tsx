@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Copy, Check, Download, Upload, Trash2, FileText } from 'lucide-react';
+import { Copy, Check, Download, Upload, Trash2, FileText, Type, Hash, AlignLeft, HardDrive, Activity, Code, Wand2, Sparkles } from 'lucide-react';
 
 export default function ConvertCase() {
   const [text, setText] = useState('');
@@ -100,6 +100,10 @@ export default function ConvertCase() {
   const BUTTON_GROUPS = [
     {
       title: "Standard Case",
+      icon: Type,
+      colorClass: "text-blue-600 dark:text-blue-400",
+      bgClass: "bg-blue-50 dark:bg-blue-900/20",
+      btnHoverClass: "hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 hover:shadow-blue-500/10",
       buttons: [
         { label: "UPPERCASE", action: toUpperCase },
         { label: "lowercase", action: toLowerCase },
@@ -113,6 +117,10 @@ export default function ConvertCase() {
     },
     {
       title: "Programming Case",
+      icon: Code,
+      colorClass: "text-indigo-600 dark:text-indigo-400",
+      bgClass: "bg-indigo-50 dark:bg-indigo-900/20",
+      btnHoverClass: "hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 hover:shadow-indigo-500/10",
       buttons: [
         { label: "camelCase", action: toCamelCase },
         { label: "PascalCase", action: toPascalCase },
@@ -125,6 +133,10 @@ export default function ConvertCase() {
     },
     {
       title: "Text Manipulation",
+      icon: Wand2,
+      colorClass: "text-purple-600 dark:text-purple-400",
+      bgClass: "bg-purple-50 dark:bg-purple-900/20",
+      btnHoverClass: "hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-700 dark:hover:text-purple-300 hover:shadow-purple-500/10",
       buttons: [
         { label: "Reverse Text", action: reverseText },
         { label: "Reverse Words", action: reverseWords },
@@ -138,6 +150,10 @@ export default function ConvertCase() {
     },
     {
       title: "Encoding & Fun",
+      icon: Sparkles,
+      colorClass: "text-pink-600 dark:text-pink-400",
+      bgClass: "bg-pink-50 dark:bg-pink-900/20",
+      btnHoverClass: "hover:border-pink-500 hover:bg-pink-50 dark:hover:bg-pink-900/20 hover:text-pink-700 dark:hover:text-pink-300 hover:shadow-pink-500/10",
       buttons: [
         { label: "Base64 Encode", action: base64Encode },
         { label: "Base64 Decode", action: base64Decode },
@@ -161,23 +177,27 @@ export default function ConvertCase() {
   const stats = getStats();
 
   return (
-    <div className="max-w-6xl mx-auto pb-12">
-      <div className="mb-8 text-center">
-        <div className="inline-flex items-center justify-center p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl mb-4">
+    <div className="max-w-7xl mx-auto pb-16 px-4 sm:px-6 lg:px-8">
+      <div className="mb-10 text-center pt-8">
+        <div className="inline-flex items-center justify-center p-3.5 bg-blue-100 dark:bg-blue-900/30 rounded-2xl mb-5 shadow-sm">
           <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">Advanced Convert Case</h1>
-        <p className="mt-3 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+        <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">Advanced Convert Case</h1>
+        <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
           Transform your text with over 20+ advanced formatting, manipulation, and encoding tools.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: Input and Stats */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col h-[600px]">
-            <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Text</span>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Column: Input and Stats (Sticky) */}
+        <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-24">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl shadow-gray-200/40 dark:shadow-none border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col h-[650px] ring-1 ring-black/5 dark:ring-white/5">
+            {/* Header Toolbar */}
+            <div className="flex justify-between items-center px-5 py-3.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-sm">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
+                <Type className="w-4 h-4 mr-2 text-blue-500" />
+                Your Text
+              </span>
               <div className="flex space-x-2">
                 <input
                   type="file"
@@ -188,7 +208,7 @@ export default function ConvertCase() {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-1.5 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors tooltip-trigger"
+                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all tooltip-trigger"
                   title="Upload File"
                 >
                   <Upload className="w-4 h-4" />
@@ -196,7 +216,7 @@ export default function ConvertCase() {
                 <button
                   onClick={handleDownload}
                   disabled={!text}
-                  className="p-1.5 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 disabled:opacity-50 transition-colors"
+                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50 transition-all"
                   title="Download as .txt"
                 >
                   <Download className="w-4 h-4" />
@@ -204,55 +224,78 @@ export default function ConvertCase() {
                 <button
                   onClick={handleClear}
                   disabled={!text}
-                  className="p-1.5 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 disabled:opacity-50 transition-colors"
+                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:text-gray-400 dark:hover:text-red-400 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50 transition-all"
                   title="Clear Text"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1 self-center"></div>
                 <button
                   onClick={handleCopy}
                   disabled={!text}
-                  className="flex items-center px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium rounded transition-colors"
+                  className="flex items-center px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-all shadow-sm hover:shadow active:scale-95"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 mr-1" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
-                  {copied ? 'Copied!' : 'Copy'}
+                  {copied ? <Check className="w-4 h-4 mr-1.5" /> : <Copy className="w-4 h-4 mr-1.5" />}
+                  {copied ? 'Copied!' : 'Copy Text'}
                 </button>
               </div>
             </div>
             
+            {/* Text Area */}
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              className="flex-1 w-full p-4 bg-transparent border-none focus:ring-0 text-gray-900 dark:text-gray-100 resize-none font-mono text-sm leading-relaxed"
+              className="flex-1 w-full p-6 bg-transparent border-none focus:ring-0 text-gray-900 dark:text-gray-100 resize-none font-mono text-[15px] leading-relaxed custom-scrollbar"
               placeholder="Type or paste your text here to get started..."
               spellCheck="false"
             />
             
-            <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-              <div className="flex flex-wrap gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
-                <span>Words: <strong className="text-gray-900 dark:text-gray-200">{stats.wordCount}</strong></span>
-                <span>Characters: <strong className="text-gray-900 dark:text-gray-200">{stats.charCount}</strong></span>
-                <span>Chars (no spaces): <strong className="text-gray-900 dark:text-gray-200">{stats.charNoSpaces}</strong></span>
-                <span>Lines: <strong className="text-gray-900 dark:text-gray-200">{stats.lineCount}</strong></span>
-                <span>Size: <strong className="text-gray-900 dark:text-gray-200">{stats.byteSize} bytes</strong></span>
+            {/* Colored Stats Footer */}
+            <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-sm">
+              <div className="flex flex-wrap gap-3 text-xs font-medium">
+                <div className="flex items-center px-3 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400 transition-transform hover:scale-105 cursor-default">
+                  <Type className="w-4 h-4 mr-2 opacity-70" />
+                  Words: <strong className="ml-1.5 text-blue-900 dark:text-blue-100 text-sm">{stats.wordCount}</strong>
+                </div>
+                <div className="flex items-center px-3 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-400 transition-transform hover:scale-105 cursor-default">
+                  <Hash className="w-4 h-4 mr-2 opacity-70" />
+                  Characters: <strong className="ml-1.5 text-indigo-900 dark:text-indigo-100 text-sm">{stats.charCount}</strong>
+                </div>
+                <div className="flex items-center px-3 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-violet-200 dark:border-violet-800/50 text-violet-700 dark:text-violet-400 transition-transform hover:scale-105 cursor-default">
+                  <AlignLeft className="w-4 h-4 mr-2 opacity-70" />
+                  Characters (no spaces): <strong className="ml-1.5 text-violet-900 dark:text-violet-100 text-sm">{stats.charNoSpaces}</strong>
+                </div>
+                <div className="flex items-center px-3 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-fuchsia-200 dark:border-fuchsia-800/50 text-fuchsia-700 dark:text-fuchsia-400 transition-transform hover:scale-105 cursor-default">
+                  <Activity className="w-4 h-4 mr-2 opacity-70" />
+                  Lines: <strong className="ml-1.5 text-fuchsia-900 dark:text-fuchsia-100 text-sm">{stats.lineCount}</strong>
+                </div>
+                <div className="flex items-center px-3 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-rose-200 dark:border-rose-800/50 text-rose-700 dark:text-rose-400 transition-transform hover:scale-105 cursor-default">
+                  <HardDrive className="w-4 h-4 mr-2 opacity-70" />
+                  Size: <strong className="ml-1.5 text-rose-900 dark:text-rose-100 text-sm">{stats.byteSize} B</strong>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Actions */}
-        <div className="lg:col-span-5 space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+        {/* Right Column: Actions (Scrollable naturally with page) */}
+        <div className="lg:col-span-5 space-y-6">
           {BUTTON_GROUPS.map((group, idx) => (
-            <div key={idx} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-                {group.title}
-              </h3>
-              <div className="flex flex-wrap gap-2">
+            <div key={idx} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700 p-6">
+              <div className="flex items-center space-x-3 mb-5">
+                <div className={`p-2.5 rounded-xl ${group.bgClass} ${group.colorClass}`}>
+                  <group.icon className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                  {group.title}
+                </h3>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
                 {group.buttons.map((btn, bIdx) => (
                   <button
                     key={bIdx}
                     onClick={() => apply(btn.action)}
-                    className="px-3 py-2 bg-gray-100 hover:bg-blue-50 dark:bg-gray-700 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-200 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium rounded-lg transition-all duration-200 border border-transparent hover:border-blue-200 dark:hover:border-blue-800 active:scale-95"
+                    className={`px-4 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-xl transition-all duration-200 border border-gray-200 dark:border-gray-700 hover:shadow-md hover:-translate-y-0.5 active:scale-95 ${group.btnHoverClass}`}
                   >
                     {btn.label}
                   </button>
