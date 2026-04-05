@@ -17,7 +17,7 @@ import {
 
 export const TOOLS = [
   { id: 'convert-case', name: 'Convert Case', icon: Type, path: '/tools/convert-case', category: 'Text Tools', description: 'Easily convert text between UPPERCASE, lowercase, Title Case, and more.' },
-  { id: 'line-to-semicolon', name: 'Line to Semicolon', icon: AlignLeft, path: '/tools/line-to-semicolon', category: 'Text Tools', description: 'Convert multiline text to semicolon or comma-separated lists. Great for ASINs.' },
+  { id: 'line-to-semicolon', name: 'Line to Semicolon', icon: AlignLeft, path: '/tools/line-to-semicolon', category: 'Text Tools', description: 'Advanced list converter with 20+ features. Convert lines to semicolon, comma, or custom delimiters with sorting, cleaning, and formatting.' },
 ];
 
 export default function Layout() {
