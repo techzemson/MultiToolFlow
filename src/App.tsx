@@ -13,6 +13,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import ConvertCase from './tools/ConvertCase';
 import LineConverter from './tools/LineConverter';
+import PercentageCalculator from './tools/PercentageCalculator';
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
               <Route index element={<Home />} />
               <Route path="tools/convert-case" element={<ConvertCase />} />
               <Route path="tools/line-to-semicolon" element={<LineConverter />} />
+              <Route path="tools/percentage-calculator" element={<PercentageCalculator />} />
             </Route>
           </Routes>
         </BrowserRouter>
