@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 
 export const TOOLS = [
-  { id: 'amazon-ppc', name: 'Amazon PPC Report', icon: BarChart3, path: '/tools/amazon-ppc', category: 'Amazon Tools', description: 'Generate AI-powered insights and charts from Amazon Ads Excel reports.' },
   { id: 'convert-case', name: 'Convert Case', icon: Type, path: '/tools/convert-case', category: 'Text Tools', description: 'Easily convert text between UPPERCASE, lowercase, Title Case, and more.' },
   { id: 'line-to-semicolon', name: 'Line to Semicolon', icon: AlignLeft, path: '/tools/line-to-semicolon', category: 'Text Tools', description: 'Convert multiline text to semicolon or comma-separated lists. Great for ASINs.' },
 ];
