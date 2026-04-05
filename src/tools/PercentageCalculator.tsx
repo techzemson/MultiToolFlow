@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Percent, Calculator, TrendingUp, DollarSign, PieChart, ArrowRightLeft, Divide, Receipt, Tag, ShoppingCart, BookOpen, Activity } from 'lucide-react';
+import { Percent, Calculator, TrendingUp, DollarSign, PieChart as PieChartIcon, ArrowRightLeft, Divide, Receipt, Tag, ShoppingCart, BookOpen, Activity } from 'lucide-react';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { motion, AnimatePresence } from 'motion/react';
 
 // --- Helper Functions ---
 
@@ -39,6 +41,11 @@ const parse = (val: string) => val === '' ? null : Number(val);
 
 // --- Component Definitions ---
 
+interface ChartData {
+  type: 'pie' | 'bar';
+  data: { name: string; value: number; color: string }[];
+}
+
 interface CalcProps {
   title: string;
   template: string;
@@ -47,9 +54,10 @@ interface CalcProps {
   format: string;
   colorTheme: 'blue' | 'emerald' | 'purple' | 'amber';
   icon: React.ElementType;
+  getChartData?: (v: (number | null)[], result: any) => ChartData | null;
 }
 
-const TemplateCalculator: React.FC<CalcProps> = ({ title, template, inputLabels, calculate, format, colorTheme, icon: Icon }) => {
+const TemplateCalculator: React.FC<CalcProps> = ({ title, template, inputLabels, calculate, format, colorTheme, icon: Icon, getChartData }) => {
   const parts = template.split(/(\{\d+\})/);
   const numInputs = inputLabels.length;
   const [values, setValues] = useState<string[]>(Array(numInputs).fill(''));
@@ -63,6 +71,7 @@ const TemplateCalculator: React.FC<CalcProps> = ({ title, template, inputLabels,
   const parsedValues = values.map(parse);
   const isReady = parsedValues.every(v => v !== null);
   const result = isReady ? calculate(parsedValues) : null;
+  const chartData = isReady && getChartData ? getChartData(parsedValues, result) : null;
 
   const themeColors = {
     blue: 'border-blue-200 dark:border-blue-800/50 bg-blue-50/30 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300 ring-blue-500',
@@ -114,6 +123,48 @@ const TemplateCalculator: React.FC<CalcProps> = ({ title, template, inputLabels,
         })}
       </div>
 
+      <AnimatePresence>
+        {chartData && (
+          <motion.div
+            initial={{ height: 0, opacity: 0, marginTop: 0 }}
+            animate={{ height: 160, opacity: 1, marginTop: 16 }}
+            exit={{ height: 0, opacity: 0, marginTop: 0 }}
+            className="w-full overflow-hidden mb-4"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              {chartData.type === 'pie' ? (
+                <PieChart>
+                  <Pie data={chartData.data} dataKey="value" cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={2}>
+                    {chartData.data.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                    formatter={(value) => Number(value).toLocaleString()} 
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
+                  />
+                </PieChart>
+              ) : (
+                <BarChart data={chartData.data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <XAxis dataKey="name" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
+                  <YAxis tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} tickFormatter={(val) => val >= 1000 ? `${(val/1000).toFixed(1)}k` : val} />
+                  <RechartsTooltip 
+                    formatter={(value) => Number(value).toLocaleString()}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
+                    cursor={{fill: 'rgba(0,0,0,0.05)'}}
+                  />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                    {chartData.data.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              )}
+            </ResponsiveContainer>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className={`mt-auto rounded-xl p-4 flex items-center justify-between transition-colors duration-300 ${isReady ? resultColors[colorTheme] : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500'}`}>
         <span className="text-xs font-bold uppercase tracking-wider opacity-80">Result</span>
         <span className="text-xl font-extrabold tracking-tight">{formatNumber(result, format)}</span>
@@ -133,7 +184,17 @@ const calculators: CalcProps[] = [
     calculate: (v) => v[0]! * v[1]! / 100,
     format: 'number',
     colorTheme: 'blue',
-    icon: Percent
+    icon: Percent,
+    getChartData: (v, res) => {
+      if (v[1]! <= 0 || res < 0) return null;
+      return {
+        type: 'pie',
+        data: [
+          { name: 'Percentage', value: res, color: '#3b82f6' },
+          { name: 'Remaining', value: Math.max(0, v[1]! - res), color: '#e2e8f0' }
+        ]
+      };
+    }
   },
   {
     title: 'Find the Percentage',
@@ -142,7 +203,17 @@ const calculators: CalcProps[] = [
     calculate: (v) => (v[0]! / v[1]!) * 100,
     format: 'percent',
     colorTheme: 'blue',
-    icon: Divide
+    icon: Divide,
+    getChartData: (v, res) => {
+      if (v[1]! <= 0 || v[0]! < 0) return null;
+      return {
+        type: 'pie',
+        data: [
+          { name: 'Part', value: v[0]!, color: '#3b82f6' },
+          { name: 'Remaining', value: Math.max(0, v[1]! - v[0]!), color: '#e2e8f0' }
+        ]
+      };
+    }
   },
   {
     title: 'Find the Whole',
@@ -151,7 +222,17 @@ const calculators: CalcProps[] = [
     calculate: (v) => v[0]! / (v[1]! / 100),
     format: 'number',
     colorTheme: 'blue',
-    icon: Calculator
+    icon: Calculator,
+    getChartData: (v, res) => {
+      if (res <= 0 || v[0]! < 0) return null;
+      return {
+        type: 'pie',
+        data: [
+          { name: 'Part', value: v[0]!, color: '#3b82f6' },
+          { name: 'Remaining', value: Math.max(0, res - v[0]!), color: '#e2e8f0' }
+        ]
+      };
+    }
   },
   {
     title: 'Percentage Change',
@@ -160,7 +241,16 @@ const calculators: CalcProps[] = [
     calculate: (v) => ((v[1]! - v[0]!) / v[0]!) * 100,
     format: 'custom_change',
     colorTheme: 'blue',
-    icon: TrendingUp
+    icon: TrendingUp,
+    getChartData: (v, res) => {
+      return {
+        type: 'bar',
+        data: [
+          { name: 'Old', value: v[0]!, color: '#94a3b8' },
+          { name: 'New', value: v[1]!, color: v[1]! > v[0]! ? '#22c55e' : '#ef4444' }
+        ]
+      };
+    }
   },
   {
     title: 'Percentage Difference',
@@ -169,7 +259,16 @@ const calculators: CalcProps[] = [
     calculate: (v) => Math.abs(v[0]! - v[1]!) / ((v[0]! + v[1]!) / 2) * 100,
     format: 'percent',
     colorTheme: 'blue',
-    icon: ArrowRightLeft
+    icon: ArrowRightLeft,
+    getChartData: (v, res) => {
+      return {
+        type: 'bar',
+        data: [
+          { name: 'Value 1', value: v[0]!, color: '#3b82f6' },
+          { name: 'Value 2', value: v[1]!, color: '#60a5fa' }
+        ]
+      };
+    }
   },
   {
     title: 'Add Percentage',
@@ -178,7 +277,18 @@ const calculators: CalcProps[] = [
     calculate: (v) => v[0]! + (v[0]! * v[1]! / 100),
     format: 'number',
     colorTheme: 'blue',
-    icon: Calculator
+    icon: Calculator,
+    getChartData: (v, res) => {
+      if (v[0]! < 0 || v[1]! < 0) return null;
+      return {
+        type: 'bar',
+        data: [
+          { name: 'Original', value: v[0]!, color: '#94a3b8' },
+          { name: 'Added', value: res - v[0]!, color: '#3b82f6' },
+          { name: 'Total', value: res, color: '#1d4ed8' }
+        ]
+      };
+    }
   },
   {
     title: 'Subtract Percentage',
@@ -187,7 +297,18 @@ const calculators: CalcProps[] = [
     calculate: (v) => v[0]! - (v[0]! * v[1]! / 100),
     format: 'number',
     colorTheme: 'blue',
-    icon: Calculator
+    icon: Calculator,
+    getChartData: (v, res) => {
+      if (v[0]! < 0 || v[1]! < 0) return null;
+      return {
+        type: 'bar',
+        data: [
+          { name: 'Original', value: v[0]!, color: '#94a3b8' },
+          { name: 'Subtracted', value: v[0]! - res, color: '#ef4444' },
+          { name: 'Remaining', value: res, color: '#3b82f6' }
+        ]
+      };
+    }
   },
 
   // --- FINANCIAL ---
@@ -198,7 +319,18 @@ const calculators: CalcProps[] = [
     calculate: (v) => v[0]! - (v[0]! * v[1]! / 100),
     format: 'currency',
     colorTheme: 'emerald',
-    icon: Tag
+    icon: Tag,
+    getChartData: (v, res) => {
+      if (v[0]! <= 0) return null;
+      return {
+        type: 'bar',
+        data: [
+          { name: 'Original', value: v[0]!, color: '#94a3b8' },
+          { name: 'Discount', value: v[0]! - res, color: '#ef4444' },
+          { name: 'Final', value: res, color: '#10b981' }
+        ]
+      };
+    }
   },
   {
     title: 'Double Discount',
@@ -207,7 +339,19 @@ const calculators: CalcProps[] = [
     calculate: (v) => v[0]! * (1 - v[1]!/100) * (1 - v[2]!/100),
     format: 'currency',
     colorTheme: 'emerald',
-    icon: Tag
+    icon: Tag,
+    getChartData: (v, res) => {
+      if (v[0]! <= 0) return null;
+      const step1 = v[0]! * (1 - v[1]!/100);
+      return {
+        type: 'bar',
+        data: [
+          { name: 'Original', value: v[0]!, color: '#94a3b8' },
+          { name: 'After D1', value: step1, color: '#34d399' },
+          { name: 'Final', value: res, color: '#10b981' }
+        ]
+      };
+    }
   },
   {
     title: 'Sales Tax',
@@ -216,7 +360,17 @@ const calculators: CalcProps[] = [
     calculate: (v) => v[0]! * (1 + v[1]!/100),
     format: 'currency',
     colorTheme: 'emerald',
-    icon: Receipt
+    icon: Receipt,
+    getChartData: (v, res) => {
+      if (v[0]! <= 0) return null;
+      return {
+        type: 'pie',
+        data: [
+          { name: 'Price', value: v[0]!, color: '#10b981' },
+          { name: 'Tax', value: res - v[0]!, color: '#f59e0b' }
+        ]
+      };
+    }
   },
   {
     title: 'Reverse Sales Tax',
@@ -225,7 +379,17 @@ const calculators: CalcProps[] = [
     calculate: (v) => v[0]! / (1 + v[1]!/100),
     format: 'currency',
     colorTheme: 'emerald',
-    icon: Receipt
+    icon: Receipt,
+    getChartData: (v, res) => {
+      if (v[0]! <= 0) return null;
+      return {
+        type: 'pie',
+        data: [
+          { name: 'Original', value: res, color: '#10b981' },
+          { name: 'Tax', value: v[0]! - res, color: '#f59e0b' }
+        ]
+      };
+    }
   },
   {
     title: 'Profit Margin',
@@ -234,7 +398,17 @@ const calculators: CalcProps[] = [
     calculate: (v) => ((v[1]! - v[0]!) / v[1]!) * 100,
     format: 'percent',
     colorTheme: 'emerald',
-    icon: PieChart
+    icon: PieChartIcon,
+    getChartData: (v, res) => {
+      if (v[1]! <= 0 || v[0]! < 0) return null;
+      return {
+        type: 'pie',
+        data: [
+          { name: 'Cost', value: v[0]!, color: '#ef4444' },
+          { name: 'Profit', value: Math.max(0, v[1]! - v[0]!), color: '#10b981' }
+        ]
+      };
+    }
   },
   {
     title: 'Markup Calculator',
@@ -243,7 +417,17 @@ const calculators: CalcProps[] = [
     calculate: (v) => v[0]! * (1 + v[1]!/100),
     format: 'currency',
     colorTheme: 'emerald',
-    icon: TrendingUp
+    icon: TrendingUp,
+    getChartData: (v, res) => {
+      if (v[0]! <= 0) return null;
+      return {
+        type: 'pie',
+        data: [
+          { name: 'Cost', value: v[0]!, color: '#94a3b8' },
+          { name: 'Markup', value: res - v[0]!, color: '#10b981' }
+        ]
+      };
+    }
   },
   {
     title: 'ROI (Return on Investment)',
@@ -252,7 +436,16 @@ const calculators: CalcProps[] = [
     calculate: (v) => ((v[1]! - v[0]!) / v[0]!) * 100,
     format: 'percent',
     colorTheme: 'emerald',
-    icon: DollarSign
+    icon: DollarSign,
+    getChartData: (v, res) => {
+      return {
+        type: 'bar',
+        data: [
+          { name: 'Invested', value: v[0]!, color: '#94a3b8' },
+          { name: 'Returned', value: v[1]!, color: v[1]! > v[0]! ? '#10b981' : '#ef4444' }
+        ]
+      };
+    }
   },
   {
     title: 'Tip & Split Calculator',
@@ -261,7 +454,17 @@ const calculators: CalcProps[] = [
     calculate: (v) => ({ total: v[0]!*(1+v[1]!/100), perPerson: (v[0]!*(1+v[1]!/100))/v[2]! }),
     format: 'custom_tip',
     colorTheme: 'emerald',
-    icon: ShoppingCart
+    icon: ShoppingCart,
+    getChartData: (v, res) => {
+      if (v[0]! <= 0) return null;
+      return {
+        type: 'pie',
+        data: [
+          { name: 'Bill', value: v[0]!, color: '#94a3b8' },
+          { name: 'Tip', value: res.total - v[0]!, color: '#10b981' }
+        ]
+      };
+    }
   },
 
   // --- MATH & CONVERSIONS ---
@@ -272,7 +475,17 @@ const calculators: CalcProps[] = [
     calculate: (v) => (v[0]! / v[1]!) * 100,
     format: 'percent',
     colorTheme: 'purple',
-    icon: Divide
+    icon: Divide,
+    getChartData: (v, res) => {
+      if (v[1]! <= 0 || v[0]! < 0 || v[0]! > v[1]!) return null;
+      return {
+        type: 'pie',
+        data: [
+          { name: 'Numerator', value: v[0]!, color: '#8b5cf6' },
+          { name: 'Remaining', value: v[1]! - v[0]!, color: '#e2e8f0' }
+        ]
+      };
+    }
   },
   {
     title: 'Percentage to Fraction',
@@ -308,7 +521,16 @@ const calculators: CalcProps[] = [
     calculate: (v) => Math.abs(v[0]! - v[1]!) / Math.abs(v[1]!) * 100,
     format: 'percent',
     colorTheme: 'purple',
-    icon: Activity
+    icon: Activity,
+    getChartData: (v, res) => {
+      return {
+        type: 'bar',
+        data: [
+          { name: 'Expected', value: v[1]!, color: '#94a3b8' },
+          { name: 'Observed', value: v[0]!, color: '#8b5cf6' }
+        ]
+      };
+    }
   },
   {
     title: 'Grade Percentage',
@@ -317,7 +539,17 @@ const calculators: CalcProps[] = [
     calculate: (v) => (v[0]! / v[1]!) * 100,
     format: 'percent',
     colorTheme: 'purple',
-    icon: BookOpen
+    icon: BookOpen,
+    getChartData: (v, res) => {
+      if (v[1]! <= 0 || v[0]! < 0) return null;
+      return {
+        type: 'pie',
+        data: [
+          { name: 'Scored', value: v[0]!, color: '#8b5cf6' },
+          { name: 'Missed', value: Math.max(0, v[1]! - v[0]!), color: '#e2e8f0' }
+        ]
+      };
+    }
   }
 ];
 
@@ -344,7 +576,7 @@ export default function PercentageCalculator() {
         </div>
         <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">Advanced Percentage Calculator</h1>
         <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed">
-          21 powerful, real-time calculators for finance, math, business, and everyday use.
+          21 powerful, real-time calculators for finance, math, business, and everyday use. Now with interactive charts!
         </p>
       </div>
 
@@ -366,7 +598,7 @@ export default function PercentageCalculator() {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
         {filteredCalculators.map((calc, idx) => (
           <TemplateCalculator key={idx} {...calc} />
         ))}
