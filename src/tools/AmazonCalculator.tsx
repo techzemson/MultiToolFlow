@@ -1,13 +1,23 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Calculator, Package, Truck, DollarSign, TrendingUp, PieChart as PieChartIcon, 
-  Sparkles, IndianRupee, AlertCircle, Info, ArrowRight, Copy, Check, BarChart3, Tag
+  Sparkles, AlertCircle, Info, ArrowRight, Copy, Check, Target, Scale,
+  Globe, HelpCircle
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from '@google/genai';
 
 // --- Constants & Data ---
+
+const CURRENCIES = [
+  { code: 'INR', symbol: '₹', label: 'Indian Rupee (Default)' },
+  { code: 'USD', symbol: '$', label: 'US Dollar' },
+  { code: 'EUR', symbol: '€', label: 'Euro' },
+  { code: 'GBP', symbol: '£', label: 'British Pound' },
+  { code: 'CAD', symbol: 'C$', label: 'Canadian Dollar' },
+  { code: 'AUD', symbol: 'A$', label: 'Australian Dollar' },
+];
 
 const CATEGORIES = [
   { name: 'Electronics & Accessories', fee: 0.08 },
@@ -37,37 +47,51 @@ const FBA_TIERS_INR = [
 
 export default function AmazonCalculator() {
   // --- State ---
-  const [currency, setCurrency] = useState<'USD' | 'INR'>('USD');
+  const [currency, setCurrency] = useState('INR');
   const [copied, setCopied] = useState(false);
   
-  // Inputs
-  const [price, setPrice] = useState<number>(29.99);
-  const [cost, setCost] = useState<number>(8.00);
-  const [categoryFee, setCategoryFee] = useState<number>(0.15);
-  const [weightTier, setWeightTier] = useState<string>('small');
-  const [storageMonths, setStorageMonths] = useState<number>(1);
-  const [fbmShipping, setFbmShipping] = useState<number>(5.00);
-  const [ppc, setPpc] = useState<number>(2.00);
-  const [returnRate, setReturnRate] = useState<number>(5); // Percentage
-  const [otherCosts, setOtherCosts] = useState<number>(1.00);
+  // Inputs (Using strings to fix the "typing decimal/empty" bug)
+  const [price, setPrice] = useState('999');
+  const [cost, setCost] = useState('250');
+  const [categoryFee, setCategoryFee] = useState('0.15');
+  const [weightTier, setWeightTier] = useState('standard');
+  const [storageMonths, setStorageMonths] = useState('1');
+  const [fbmShipping, setFbmShipping] = useState('80');
+  const [ppc, setPpc] = useState('50');
+  const [returnRate, setReturnRate] = useState('5'); // Percentage
+  const [otherCosts, setOtherCosts] = useState('20');
+  const [targetMargin, setTargetMargin] = useState('25'); // Percentage
 
   // AI State
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInsights, setAiInsights] = useState<string | null>(null);
 
+  // --- Parsed Values ---
+  const p = parseFloat(price) || 0;
+  const c = parseFloat(cost) || 0;
+  const catFee = parseFloat(categoryFee) || 0;
+  const fbmS = parseFloat(fbmShipping) || 0;
+  const ppcCost = parseFloat(ppc) || 0;
+  const retRate = parseFloat(returnRate) || 0;
+  const other = parseFloat(otherCosts) || 0;
+  const months = parseFloat(storageMonths) || 0;
+  const tMargin = parseFloat(targetMargin) || 0;
+
   // --- Calculations ---
-  const sym = currency === 'USD' ? '$' : '₹';
-  const fbaTiers = currency === 'USD' ? FBA_TIERS_USD : FBA_TIERS_INR;
+  const activeCurrency = CURRENCIES.find(curr => curr.code === currency) || CURRENCIES[0];
+  const sym = activeCurrency.symbol;
+  const isINR = currency === 'INR';
+  const fbaTiers = isINR ? FBA_TIERS_INR : FBA_TIERS_USD;
   
   // 1. Referral Fee
-  const referralFee = price * categoryFee;
+  const referralFee = p * catFee;
   
-  // 2. Closing Fee (Amazon India specific, simplified for USD)
+  // 2. Closing Fee (Amazon India specific, simplified for others)
   let closingFee = 0;
-  if (currency === 'INR') {
-    if (price <= 250) closingFee = 25;
-    else if (price <= 500) closingFee = 30;
-    else if (price <= 1000) closingFee = 50;
+  if (isINR) {
+    if (p <= 250) closingFee = 25;
+    else if (p <= 500) closingFee = 30;
+    else if (p <= 1000) closingFee = 50;
     else closingFee = 61;
   } else {
     closingFee = 0.99; // Simplified individual seller fee or fixed closing fee
@@ -78,56 +102,72 @@ export default function AmazonCalculator() {
   const fbaFee = selectedTier.fee;
 
   // 4. Storage Fee (Simplified)
-  const storageFeePerMonth = currency === 'USD' ? 0.83 : 30; // $0.83 or ₹30 per unit approx
-  const totalStorageFee = storageFeePerMonth * storageMonths;
+  const storageFeePerMonth = isINR ? 30 : 0.83; 
+  const totalStorageFee = storageFeePerMonth * months;
 
   // 5. Returns Cost (Lost fees, return shipping, unsellable inventory)
-  const returnCost = price * (returnRate / 100);
+  const returnCost = p * (retRate / 100);
 
   // --- Totals ---
   const totalFbaFees = referralFee + closingFee + fbaFee + totalStorageFee;
-  const totalFbmFees = referralFee + closingFee + fbmShipping;
+  const totalFbmFees = referralFee + closingFee + fbmS;
   
-  const totalFbaCost = cost + totalFbaFees + ppc + returnCost + otherCosts;
-  const totalFbmCost = cost + totalFbmFees + ppc + returnCost + otherCosts;
+  const fixedFbaCosts = c + fbaFee + totalStorageFee + ppcCost + other + closingFee;
+  const fixedFbmCosts = c + fbmS + ppcCost + other + closingFee;
 
-  const fbaProfit = price - totalFbaCost;
-  const fbmProfit = price - totalFbmCost;
+  const totalFbaCost = fixedFbaCosts + referralFee + returnCost;
+  const totalFbmCost = fixedFbmCosts + referralFee + returnCost;
 
-  const fbaMargin = price > 0 ? (fbaProfit / price) * 100 : 0;
-  const fbmMargin = price > 0 ? (fbmProfit / price) * 100 : 0;
+  const fbaProfit = p - totalFbaCost;
+  const fbmProfit = p - totalFbmCost;
 
-  const fbaROI = cost > 0 ? (fbaProfit / cost) * 100 : 0;
-  const fbmROI = cost > 0 ? (fbmProfit / cost) * 100 : 0;
+  const fbaMargin = p > 0 ? (fbaProfit / p) * 100 : 0;
+  const fbmMargin = p > 0 ? (fbmProfit / p) * 100 : 0;
 
-  const breakEvenFBA = totalFbaCost - fbaProfit + price; // Simplified break-even
+  const fbaROI = c > 0 ? (fbaProfit / c) * 100 : 0;
+  const fbmROI = c > 0 ? (fbmProfit / c) * 100 : 0;
+
+  // --- Advanced Features: Break-even & Target Price ---
+  const variableFeePercentage = catFee + (retRate / 100);
+  
+  let breakEvenFBA = 0;
+  let targetPriceFBA = 0;
+  
+  if (variableFeePercentage < 1) {
+    breakEvenFBA = fixedFbaCosts / (1 - variableFeePercentage);
+    
+    const targetDivisor = 1 - (tMargin / 100) - variableFeePercentage;
+    if (targetDivisor > 0) {
+      targetPriceFBA = fixedFbaCosts / targetDivisor;
+    }
+  }
 
   // --- Chart Data ---
   const fbaChartData = [
-    { name: 'Product Cost', value: cost, color: '#94a3b8' },
+    { name: 'Product Cost', value: c, color: '#94a3b8' },
     { name: 'Amazon Fees', value: totalFbaFees, color: '#f59e0b' },
-    { name: 'Marketing (PPC)', value: ppc, color: '#8b5cf6' },
-    { name: 'Returns & Other', value: returnCost + otherCosts, color: '#ef4444' },
+    { name: 'Marketing (PPC)', value: ppcCost, color: '#8b5cf6' },
+    { name: 'Returns & Other', value: returnCost + other, color: '#ef4444' },
     { name: 'Net Profit', value: Math.max(0, fbaProfit), color: '#10b981' },
   ].filter(d => d.value > 0);
 
   // --- Handlers ---
-  const handleCurrencyToggle = (c: 'USD' | 'INR') => {
-    setCurrency(c);
+  const handleCurrencyToggle = (code: string) => {
+    setCurrency(code);
     // Adjust defaults to make sense in the new currency
-    if (c === 'INR') {
-      setPrice(999);
-      setCost(250);
-      setFbmShipping(80);
-      setPpc(50);
-      setOtherCosts(20);
+    if (code === 'INR') {
+      setPrice('999');
+      setCost('250');
+      setFbmShipping('80');
+      setPpc('50');
+      setOtherCosts('20');
       setWeightTier('standard');
     } else {
-      setPrice(29.99);
-      setCost(8.00);
-      setFbmShipping(5.00);
-      setPpc(2.00);
-      setOtherCosts(1.00);
+      setPrice('29.99');
+      setCost('8.00');
+      setFbmShipping('5.00');
+      setPpc('2.00');
+      setOtherCosts('1.00');
       setWeightTier('small');
     }
     setAiInsights(null);
@@ -135,11 +175,13 @@ export default function AmazonCalculator() {
 
   const copyResults = () => {
     const text = `Amazon Profit Estimate (${currency})
-Selling Price: ${sym}${price.toFixed(2)}
-Product Cost: ${sym}${cost.toFixed(2)}
+Selling Price: ${sym}${p.toFixed(2)}
+Product Cost: ${sym}${c.toFixed(2)}
 
 FBA Profit: ${sym}${fbaProfit.toFixed(2)} (${fbaMargin.toFixed(1)}% Margin)
 FBM Profit: ${sym}${fbmProfit.toFixed(2)} (${fbmMargin.toFixed(1)}% Margin)
+
+Break-even Price (FBA): ${sym}${breakEvenFBA.toFixed(2)}
 `;
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -152,12 +194,13 @@ FBM Profit: ${sym}${fbmProfit.toFixed(2)} (${fbmMargin.toFixed(1)}% Margin)
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const prompt = `I am a new Amazon seller. I am analyzing a product with the following details:
       Currency: ${currency}
-      Selling Price: ${sym}${price.toFixed(2)}
-      Sourcing Cost: ${sym}${cost.toFixed(2)}
+      Selling Price: ${sym}${p.toFixed(2)}
+      Sourcing Cost: ${sym}${c.toFixed(2)}
       FBA Profit: ${sym}${fbaProfit.toFixed(2)} (${fbaMargin.toFixed(1)}% margin, ${fbaROI.toFixed(1)}% ROI)
       FBM Profit: ${sym}${fbmProfit.toFixed(2)} (${fbmMargin.toFixed(1)}% margin, ${fbmROI.toFixed(1)}% ROI)
-      Return Rate: ${returnRate}%
-      PPC Cost: ${sym}${ppc.toFixed(2)}
+      Return Rate: ${retRate}%
+      PPC Cost: ${sym}${ppcCost.toFixed(2)}
+      Break-even Price: ${sym}${breakEvenFBA.toFixed(2)}
 
       Please provide 3 beginner-friendly bullet points of advice. 
       1. Is this a good product to launch based on the margins? (Usually 20-30% is good).
@@ -185,8 +228,8 @@ FBM Profit: ${sym}${fbmProfit.toFixed(2)} (${fbmMargin.toFixed(1)}% Margin)
         <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
           {label}
           <div className="ml-1.5 text-gray-400 hover:text-blue-500 cursor-help relative">
-            <Info className="w-4 h-4" />
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 pointer-events-none text-center shadow-xl">
+            <HelpCircle className="w-4 h-4" />
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 p-2.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 pointer-events-none text-center shadow-xl font-normal leading-relaxed">
               {tooltip}
               <div className="absolute left-1/2 -translate-x-1/2 top-full border-4 border-transparent border-t-gray-900"></div>
             </div>
@@ -206,53 +249,54 @@ FBM Profit: ${sym}${fbmProfit.toFixed(2)} (${fbmMargin.toFixed(1)}% Margin)
         </div>
         <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">Amazon Profit Calculator</h1>
         <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed">
-          The ultimate tool for new Amazon sellers. Calculate FBA vs FBM profits, analyze fees, and get AI-powered insights before launching your product.
+          The ultimate tool for new Amazon sellers. Calculate FBA vs FBM profits, discover your break-even price, and get AI-powered insights before launching.
         </p>
       </div>
 
-      {/* Currency Toggle */}
-      <div className="flex justify-center mb-8">
-        <div className="bg-gray-100 dark:bg-gray-800 p-1.5 rounded-xl inline-flex shadow-inner">
+      {/* Currency Selector */}
+      <div className="flex flex-wrap justify-center gap-2 mb-10">
+        {CURRENCIES.map(c => (
           <button
-            onClick={() => handleCurrencyToggle('USD')}
-            className={`flex items-center px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${currency === 'USD' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            key={c.code}
+            onClick={() => handleCurrencyToggle(c.code)}
+            className={`flex items-center px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
+              currency === c.code
+                ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20 scale-105'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+            }`}
           >
-            <DollarSign className="w-4 h-4 mr-2" /> USD ($)
+            <span className="mr-1.5 opacity-70">{c.symbol}</span> {c.code}
           </button>
-          <button
-            onClick={() => handleCurrencyToggle('INR')}
-            className={`flex items-center px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${currency === 'INR' ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-          >
-            <IndianRupee className="w-4 h-4 mr-2" /> INR (₹)
-          </button>
-        </div>
+        ))}
       </div>
 
       <div className="flex flex-col xl:flex-row gap-8">
         {/* LEFT COLUMN: Inputs */}
-        <div className="w-full xl:w-[400px] flex-shrink-0 space-y-6">
+        <div className="w-full xl:w-[420px] flex-shrink-0 space-y-6">
           
-          {/* Core Product Details */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          {/* Step 1: Core Product Details */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-5 flex items-center">
-              <Tag className="w-5 h-5 mr-2 text-blue-500" /> Product Pricing
+              <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">1</span>
+              Product & Sourcing
             </h2>
             <div className="grid grid-cols-2 gap-4">
-              <InputGroup label="Selling Price" tooltip="The price the customer pays on Amazon.">
+              <InputGroup label="Selling Price" tooltip="The final price the customer pays on Amazon.">
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">{sym}</span>
-                  <input type="number" value={price} onChange={e => setPrice(Number(e.target.value))} className="w-full pl-8 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white font-semibold" />
+                  <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full pl-8 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white font-semibold transition-all" />
                 </div>
               </InputGroup>
-              <InputGroup label="Sourcing Cost" tooltip="Manufacturing + Shipping to your warehouse/Amazon.">
+              <InputGroup label="Sourcing Cost" tooltip="Cost to manufacture and ship the product to Amazon's warehouse.">
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">{sym}</span>
-                  <input type="number" value={cost} onChange={e => setCost(Number(e.target.value))} className="w-full pl-8 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white font-semibold" />
+                  <input type="number" value={cost} onChange={e => setCost(e.target.value)} className="w-full pl-8 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white font-semibold transition-all" />
                 </div>
               </InputGroup>
             </div>
-            <InputGroup label="Product Category" tooltip="Amazon charges a referral fee based on the category (usually 8% to 17%).">
-              <select value={categoryFee} onChange={e => setCategoryFee(Number(e.target.value))} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white font-medium">
+            <InputGroup label="Product Category" tooltip="Amazon charges a referral fee (commission) based on the category.">
+              <select value={categoryFee} onChange={e => setCategoryFee(e.target.value)} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white font-medium transition-all">
                 {CATEGORIES.map(c => (
                   <option key={c.name} value={c.fee}>{c.name} ({(c.fee * 100).toFixed(0)}%)</option>
                 ))}
@@ -260,64 +304,68 @@ FBM Profit: ${sym}${fbmProfit.toFixed(2)} (${fbmMargin.toFixed(1)}% Margin)
             </InputGroup>
           </div>
 
-          {/* Fulfillment Details */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          {/* Step 2: Fulfillment Details */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-5 flex items-center">
-              <Truck className="w-5 h-5 mr-2 text-amber-500" /> Fulfillment (FBA & FBM)
+              <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">2</span>
+              Fulfillment (FBA & FBM)
             </h2>
-            <InputGroup label="FBA Size & Weight Tier" tooltip="Determines the FBA pick, pack, and ship fee.">
-              <select value={weightTier} onChange={e => setWeightTier(e.target.value)} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none text-gray-900 dark:text-white font-medium">
+            <InputGroup label="FBA Size & Weight Tier" tooltip="Determines the FBA pick, pack, and ship fee. Larger/heavier items cost more.">
+              <select value={weightTier} onChange={e => setWeightTier(e.target.value)} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none text-gray-900 dark:text-white font-medium transition-all">
                 {fbaTiers.map(t => (
                   <option key={t.id} value={t.id}>{t.name} - {sym}{t.fee.toFixed(2)}</option>
                 ))}
               </select>
             </InputGroup>
             <div className="grid grid-cols-2 gap-4">
-              <InputGroup label="Storage Time" tooltip="Months the item sits in Amazon's warehouse before selling.">
+              <InputGroup label="Storage Time" tooltip="Estimated months the item sits in Amazon's warehouse before selling.">
                 <div className="relative">
-                  <input type="number" value={storageMonths} onChange={e => setStorageMonths(Number(e.target.value))} className="w-full pr-12 pl-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none text-gray-900 dark:text-white font-semibold" />
+                  <input type="number" value={storageMonths} onChange={e => setStorageMonths(e.target.value)} className="w-full pr-12 pl-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none text-gray-900 dark:text-white font-semibold transition-all" />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">mos</span>
                 </div>
               </InputGroup>
-              <InputGroup label="FBM Shipping" tooltip="Your cost to ship the item directly to the customer (if using FBM).">
+              <InputGroup label="FBM Shipping" tooltip="Your cost to ship the item directly to the customer (if you don't use FBA).">
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">{sym}</span>
-                  <input type="number" value={fbmShipping} onChange={e => setFbmShipping(Number(e.target.value))} className="w-full pl-8 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none text-gray-900 dark:text-white font-semibold" />
+                  <input type="number" value={fbmShipping} onChange={e => setFbmShipping(e.target.value)} className="w-full pl-8 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none text-gray-900 dark:text-white font-semibold transition-all" />
                 </div>
               </InputGroup>
             </div>
           </div>
 
-          {/* Marketing & Other Costs */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          {/* Step 3: Marketing & Other Costs */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-5 flex items-center">
-              <TrendingUp className="w-5 h-5 mr-2 text-purple-500" /> Marketing & Returns
+              <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">3</span>
+              Marketing & Extras
             </h2>
             <div className="grid grid-cols-2 gap-4">
-              <InputGroup label="PPC Cost / Unit" tooltip="Average advertising spend required to sell one unit.">
+              <InputGroup label="PPC Cost / Unit" tooltip="Average advertising spend (Amazon PPC) required to sell one unit.">
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">{sym}</span>
-                  <input type="number" value={ppc} onChange={e => setPpc(Number(e.target.value))} className="w-full pl-8 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-gray-900 dark:text-white font-semibold" />
+                  <input type="number" value={ppc} onChange={e => setPpc(e.target.value)} className="w-full pl-8 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-gray-900 dark:text-white font-semibold transition-all" />
                 </div>
               </InputGroup>
-              <InputGroup label="Return Rate" tooltip="Percentage of items returned by customers.">
+              <InputGroup label="Return Rate" tooltip="Percentage of items returned. Returns cost you referral fees and return shipping.">
                 <div className="relative">
-                  <input type="number" value={returnRate} onChange={e => setReturnRate(Number(e.target.value))} className="w-full pr-8 pl-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-gray-900 dark:text-white font-semibold" />
+                  <input type="number" value={returnRate} onChange={e => setReturnRate(e.target.value)} className="w-full pr-8 pl-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-gray-900 dark:text-white font-semibold transition-all" />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">%</span>
                 </div>
               </InputGroup>
             </div>
-            <InputGroup label="Other Fixed Costs" tooltip="Packaging, inserts, prep center fees, etc.">
+            <InputGroup label="Other Fixed Costs" tooltip="Packaging, inserts, prep center fees, or software costs per unit.">
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">{sym}</span>
-                <input type="number" value={otherCosts} onChange={e => setOtherCosts(Number(e.target.value))} className="w-full pl-8 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-gray-900 dark:text-white font-semibold" />
+                <input type="number" value={otherCosts} onChange={e => setOtherCosts(e.target.value)} className="w-full pl-8 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-gray-900 dark:text-white font-semibold transition-all" />
               </div>
             </InputGroup>
           </div>
         </div>
 
         {/* RIGHT COLUMN: Results & AI */}
-        <div className="flex-1 space-y-8">
+        <div className="flex-1 space-y-6">
           
           {/* Top Cards: FBA vs FBM */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -390,11 +438,40 @@ FBM Profit: ${sym}${fbmProfit.toFixed(2)} (${fbmMargin.toFixed(1)}% Margin)
 
               <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between text-gray-600 dark:text-gray-400"><span className="flex items-center"><AlertCircle className="w-3.5 h-3.5 mr-1.5 opacity-50"/> Referral Fee</span> <span>-{sym}{referralFee.toFixed(2)}</span></div>
-                <div className="flex justify-between text-gray-600 dark:text-gray-400"><span className="flex items-center"><AlertCircle className="w-3.5 h-3.5 mr-1.5 opacity-50"/> Your Shipping</span> <span>-{sym}{fbmShipping.toFixed(2)}</span></div>
+                <div className="flex justify-between text-gray-600 dark:text-gray-400"><span className="flex items-center"><AlertCircle className="w-3.5 h-3.5 mr-1.5 opacity-50"/> Your Shipping</span> <span>-{sym}{fbmS.toFixed(2)}</span></div>
                 {closingFee > 0 && <div className="flex justify-between text-gray-600 dark:text-gray-400"><span className="flex items-center"><AlertCircle className="w-3.5 h-3.5 mr-1.5 opacity-50"/> Closing Fee</span> <span>-{sym}{closingFee.toFixed(2)}</span></div>}
                 <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700 flex justify-between font-bold text-gray-900 dark:text-white">
                   <span>Total FBM Fees</span> <span>{sym}{totalFbmFees.toFixed(2)}</span>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Advanced Features: Break-even & Target Price */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 flex flex-col justify-center">
+              <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 flex items-center">
+                <Scale className="w-4 h-4 mr-2" /> Break-Even Price (FBA)
+              </h3>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">The minimum price to sell without losing money.</p>
+              <div className="text-3xl font-black text-gray-900 dark:text-white">
+                {breakEvenFBA > 0 ? `${sym}${breakEvenFBA.toFixed(2)}` : 'N/A'}
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 flex flex-col justify-center">
+              <div className="flex justify-between items-start mb-1">
+                <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center">
+                  <Target className="w-4 h-4 mr-2" /> Target Margin Price
+                </h3>
+                <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg px-2 py-1">
+                  <input type="number" value={targetMargin} onChange={e => setTargetMargin(e.target.value)} className="w-10 bg-transparent text-right text-sm font-bold outline-none text-gray-900 dark:text-white" />
+                  <span className="text-sm font-bold text-gray-500 ml-1">%</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">Price needed to hit your target margin.</p>
+              <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
+                {targetPriceFBA > 0 ? `${sym}${targetPriceFBA.toFixed(2)}` : 'N/A'}
               </div>
             </div>
           </div>
