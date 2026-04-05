@@ -83,45 +83,26 @@ export default function Home() {
   }, [filteredTools]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
       {/* Hero Section */}
-      <div className="text-center space-y-4 py-8">
-        <div className="inline-flex items-center justify-center p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl mb-4">
-          <LayoutGrid className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-        </div>
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-          All Your Tools in One Place
+      <div className="text-center space-y-6 py-16 md:py-20">
+        <h1 className="text-4xl md:text-5xl lg:text-[54px] font-bold text-[#2d3748] dark:text-white tracking-tight leading-tight">
+          Every tool you need in one place
         </h1>
-        <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
-          Discover our growing collection of free utilities designed to make your workflow faster and easier. No login required.
+        <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-4xl mx-auto leading-relaxed">
+          Every tool you need at your fingertips. All are 100% FREE and easy to use! Convert, format, analyze, and optimize your workflows with just a few clicks.
         </p>
-      </div>
 
-      {/* Search and Filter Section */}
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div className="relative group">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-          </div>
-          <input
-            type="text"
-            className="block w-full pl-11 pr-4 py-4 border border-gray-200 dark:border-gray-700 rounded-2xl leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-base transition-all shadow-sm hover:shadow-md"
-            placeholder="Search for tools by name or description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        {/* Category Pills */}
-        <div className="flex flex-wrap items-center justify-center gap-2">
+        {/* Category Tabs */}
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-8">
           {categories.map(category => (
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
                 selectedCategory === category
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-105'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105'
+                  ? 'bg-[#2d3748] text-white shadow-sm dark:bg-white dark:text-gray-900 border border-transparent'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-gray-400 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
               }`}
             >
               {category}
@@ -130,9 +111,23 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Saved Reports (Only visible if logged in and has reports) */}
+      {/* Search Bar (Subtle) */}
+      <div className="max-w-2xl mx-auto mb-12 relative group">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+        </div>
+        <input
+          type="text"
+          className="block w-full pl-11 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-base transition-all shadow-sm hover:shadow-md"
+          placeholder="Search tools..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      {/* Saved Reports */}
       {user && savedReports.length > 0 && (
-        <div className="pt-8 border-t border-gray-200 dark:border-gray-800">
+        <div className="mb-16">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Your Saved Reports</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {savedReports.map(report => {
@@ -164,58 +159,45 @@ export default function Home() {
       )}
 
       {/* Tools Grid */}
-      <div className="space-y-12 pt-8">
-        {Object.entries(groupedTools).length === 0 ? (
-          <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 border-dashed">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 mb-4">
-              <Search className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No tools found</h3>
-            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-              We couldn't find any tools matching "{searchQuery}" in the {selectedCategory} category. Try adjusting your search.
-            </p>
-            <button 
-              onClick={() => { setSearchQuery(''); setSelectedCategory('All'); }}
-              className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors"
-            >
-              Clear Search
-            </button>
+      {filteredTools.length === 0 ? (
+        <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 border-dashed">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 mb-4">
+            <Search className="w-8 h-8 text-gray-400" />
           </div>
-        ) : (
-          (Object.entries(groupedTools) as [string, typeof TOOLS][]).map(([category, tools]) => (
-            <div key={category} className="space-y-6">
-              <div className="flex items-center space-x-4">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{category}</h2>
-                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800"></div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No tools found</h3>
+          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+            We couldn't find any tools matching "{searchQuery}" in the {selectedCategory} category.
+          </p>
+          <button 
+            onClick={() => { setSearchQuery(''); setSelectedCategory('All'); }}
+            className="mt-6 px-6 py-2 bg-[#2d3748] text-white rounded-full font-medium hover:bg-gray-800 transition-colors"
+          >
+            Clear Search
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredTools.map((tool) => (
+            <Link
+              key={tool.id}
+              to={tool.path}
+              className="group relative bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200 flex flex-col h-full"
+            >
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="flex-shrink-0 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl group-hover:bg-[#2d3748] group-hover:text-white text-[#2d3748] dark:text-gray-200 transition-colors duration-200">
+                  <tool.icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-[#2d3748] dark:group-hover:text-gray-200 transition-colors duration-200">
+                  {tool.name}
+                </h3>
               </div>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {tools.map((tool) => (
-                  <Link
-                    key={tool.id}
-                    to={tool.path}
-                    className="group relative bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-all duration-300 flex flex-col h-full hover:-translate-y-1"
-                  >
-                    <div className="flex items-center space-x-4 mb-5">
-                      <div className="flex-shrink-0 p-3.5 bg-blue-50 dark:bg-blue-900/30 rounded-2xl group-hover:bg-blue-600 group-hover:text-white text-blue-600 dark:text-blue-400 transition-colors duration-300">
-                        <tool.icon className="w-6 h-6" />
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
-                        {tool.name}
-                      </h3>
-                    </div>
-                    <p className="text-base text-gray-600 dark:text-gray-400 flex-grow leading-relaxed">
-                      {tool.description}
-                    </p>
-                    <div className="mt-6 flex items-center text-sm font-semibold text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-[-10px] group-hover:translate-x-0">
-                      Open Tool <span className="ml-2">→</span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 flex-grow leading-relaxed">
+                {tool.description}
+              </p>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
