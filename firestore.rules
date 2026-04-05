@@ -1,0 +1,118 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId
+    // Fields:
+    //   - email: string (required)
+    //   - displayName: string (optional)
+    //   - photoURL: string (optional)
+    //   - createdAt: string (required, ISO 8601)
+    //   - role: string (required, 'user' or 'admin')
+    //
+    // Collection: toolUsages
+    // Document ID: usageId
+    // Fields:
+    //   - userId: string (required)
+    //   - toolId: string (required)
+    //   - usedAt: string (required, ISO 8601)
+    //   - metadata: map (optional)
+    //
+    // Collection: savedReports
+    // Document ID: reportId
+    // Fields:
+    //   - userId: string (required)
+    //   - toolId: string (required)
+    //   - name: string (required)
+    //   - data: string (required)
+    //   - createdAt: string (required, ISO 8601)
+    //
+    // ===============================================================
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "techzemson@gmail.com" && request.auth.token.email_verified == true));
+    }
+    
+    // Domain Validators
+    function isValidUser() {
+      let data = request.resource.data;
+      return hasOnlyAllowedFields(['email', 'displayName', 'photoURL', 'createdAt', 'role']) &&
+             hasRequiredFields(['email', 'createdAt', 'role']) &&
+             isValidEmail(data.email) &&
+             isValidDateString(data.createdAt) &&
+             data.role in ['user', 'admin'] &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1000));
+    }
+    
+    function isValidToolUsage() {
+      let data = request.resource.data;
+      return hasOnlyAllowedFields(['userId', 'toolId', 'usedAt', 'metadata']) &&
+             hasRequiredFields(['userId', 'toolId', 'usedAt']) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             data.toolId is string && data.toolId.size() > 0 && data.toolId.size() < 100 &&
+             isValidDateString(data.usedAt) &&
+             (!('metadata' in data) || data.metadata is map);
+    }
+    
+    function isValidSavedReport() {
+      let data = request.resource.data;
+      return hasOnlyAllowedFields(['userId', 'toolId', 'name', 'data', 'createdAt']) &&
+             hasRequiredFields(['userId', 'toolId', 'name', 'data', 'createdAt']) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             data.toolId is string && data.toolId.size() > 0 && data.toolId.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.data is string && data.data.size() < 1000000 && // 1MB limit
+             isValidDateString(data.createdAt);
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser() && ((isOwner(userId) && request.resource.data.role == 'user') || isAdmin());
+      allow update: if isAuthenticated() && isValidUser() && ((isOwner(userId) && request.resource.data.role == resource.data.role && request.resource.data.createdAt == resource.data.createdAt) || isAdmin());
+      allow delete: if isAdmin();
+    }
+    
+    match /toolUsages/{usageId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidToolUsage() && request.resource.data.userId == request.auth.uid;
+      allow update: if false; // Immutable
+      allow delete: if isAdmin();
+    }
+    
+    match /savedReports/{reportId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidSavedReport() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && isValidSavedReport() && request.resource.data.userId == request.auth.uid && resource.data.userId == request.auth.uid && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
