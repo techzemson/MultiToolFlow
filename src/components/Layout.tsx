@@ -13,13 +13,15 @@ import {
   Type,
   AlignLeft,
   BarChart3,
-  Percent
+  Percent,
+  Package
 } from 'lucide-react';
 
 export const TOOLS = [
   { id: 'convert-case', name: 'Convert Case', icon: Type, path: '/tools/convert-case', category: 'Text Tools', description: 'Easily convert text between UPPERCASE, lowercase, Title Case, and more.' },
   { id: 'line-to-semicolon', name: 'Line to Semicolon', icon: AlignLeft, path: '/tools/line-to-semicolon', category: 'Text Tools', description: 'Advanced list converter with 20+ features. Convert lines to semicolon, comma, or custom delimiters with sorting, cleaning, and formatting.' },
   { id: 'percentage-calculator', name: 'Percentage Calculator', icon: Percent, path: '/tools/percentage-calculator', category: 'Calculator', description: '21 advanced percentage calculators for finance, math, and everyday use.' },
+  { id: 'amazon-calculator', name: 'Amazon Profit Calculator', icon: Package, path: '/tools/amazon-calculator', category: 'Calculator', description: 'Calculate FBA vs FBM profits, analyze fees, and get AI-powered insights for your Amazon products.' },
 ];
 
 export default function Layout() {
