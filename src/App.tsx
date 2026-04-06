@@ -14,7 +14,6 @@ import Login from './pages/Login';
 import ConvertCase from './tools/ConvertCase';
 import LineConverter from './tools/LineConverter';
 import PercentageCalculator from './tools/PercentageCalculator';
-import NotesHabitGoalTracker from './tools/NotesHabitGoalTracker';
 
 export default function App() {
   return (
@@ -28,7 +27,6 @@ export default function App() {
               <Route path="tools/convert-case" element={<ConvertCase />} />
               <Route path="tools/line-to-semicolon" element={<LineConverter />} />
               <Route path="tools/percentage-calculator" element={<PercentageCalculator />} />
-              <Route path="tools/productivity-tracker" element={<NotesHabitGoalTracker />} />
             </Route>
           </Routes>
         </BrowserRouter>
