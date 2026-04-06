@@ -53,6 +53,24 @@ const IMPROVEMENT_DATA = [
   { name: 'Sun', tasks: 8, habits: 6 },
 ];
 
+const Modal = ({ isOpen, onClose, title, children }: any) => (
+  <AnimatePresence>
+    {isOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+          <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+            <h3 className="font-bold text-lg text-gray-900 dark:text-white">{title}</h3>
+            <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500"><X className="w-5 h-5"/></button>
+          </div>
+          <div className="p-4 max-h-[80vh] overflow-y-auto custom-scrollbar space-y-4">
+            {children}
+          </div>
+        </motion.div>
+      </div>
+    )}
+  </AnimatePresence>
+);
+
 export default function NotesHabitGoalTracker() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'notes' | 'habits' | 'goals' | 'planner'>('dashboard');
   
@@ -149,24 +167,6 @@ export default function NotesHabitGoalTracker() {
   };
 
   // --- Renderers ---
-  const Modal = ({ isOpen, onClose, title, children }: any) => (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="font-bold text-lg text-gray-900 dark:text-white">{title}</h3>
-              <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500"><X className="w-5 h-5"/></button>
-            </div>
-            <div className="p-4 max-h-[80vh] overflow-y-auto custom-scrollbar space-y-4">
-              {children}
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  );
-
   const renderDashboard = () => {
     const pendingNotes = notes.filter(n => n.status !== 'completed');
     return (
