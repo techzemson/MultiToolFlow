@@ -21,6 +21,18 @@ interface AnalysisResult {
   actionItems: string[];
   redFlags: string[];
   piiDetected: string[];
+  targetAudience: string;
+  mainArguments: string[];
+  statisticalData: string[];
+  legalClauses: string[];
+  financialFigures: string[];
+  datesAndDeadlines: string[];
+  contactInfo: string[];
+  documentLanguage: string;
+  technicalTerms: string[];
+  biasDetection: string;
+  suggestedQuestions: string[];
+  documentOutline: string[];
 }
 
 interface ChatMessage {
@@ -134,7 +146,19 @@ export default function PdfScannerApp() {
           "keyEntities": ["Entity 1", "Entity 2", "Entity 3"],
           "actionItems": ["Action 1", "Action 2"],
           "redFlags": ["Potential risk 1", "Missing information", "Concerning clause"],
-          "piiDetected": ["Type of PII found (e.g., Email, Phone, SSN) or 'None detected'"]
+          "piiDetected": ["Type of PII found (e.g., Email, Phone, SSN) or 'None detected'"],
+          "targetAudience": "Intended audience for this document",
+          "mainArguments": ["Argument 1", "Argument 2"],
+          "statisticalData": ["Statistic 1", "Statistic 2"],
+          "legalClauses": ["Clause 1", "Clause 2"],
+          "financialFigures": ["Figure 1", "Figure 2"],
+          "datesAndDeadlines": ["Date 1", "Date 2"],
+          "contactInfo": ["Contact 1", "Contact 2"],
+          "documentLanguage": "Primary language",
+          "technicalTerms": ["Term 1", "Term 2"],
+          "biasDetection": "Any detected bias or 'None detected'",
+          "suggestedQuestions": ["Question 1", "Question 2"],
+          "documentOutline": ["Section 1", "Section 2"]
         }
         
         Document Text:
@@ -169,7 +193,19 @@ export default function PdfScannerApp() {
         keyEntities: [],
         actionItems: [],
         redFlags: [],
-        piiDetected: []
+        piiDetected: [],
+        targetAudience: 'Unknown',
+        mainArguments: [],
+        statisticalData: [],
+        legalClauses: [],
+        financialFigures: [],
+        datesAndDeadlines: [],
+        contactInfo: [],
+        documentLanguage: 'Unknown',
+        technicalTerms: [],
+        biasDetection: 'Unknown',
+        suggestedQuestions: [],
+        documentOutline: []
       });
     }
   };
@@ -268,8 +304,8 @@ export default function PdfScannerApp() {
       {/* Header */}
       <div className="mb-8 pt-6 flex justify-between items-end">
         <div className="flex items-center space-x-4">
-          <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-xl">
-            <FileText className="w-8 h-8 text-red-600 dark:text-red-400" />
+          <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+            <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
             <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">AI PDF Scanner</h1>
@@ -286,17 +322,17 @@ export default function PdfScannerApp() {
       {!file && !isProcessing && (
         <motion.div 
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border-2 border-dashed border-gray-300 dark:border-gray-700 p-12 text-center hover:border-red-500 dark:hover:border-red-500 transition-colors group relative"
+          className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border-2 border-dashed border-gray-300 dark:border-gray-700 p-12 text-center hover:border-blue-500 dark:hover:border-blue-500 transition-colors group relative"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
         >
-          <input type="file" accept="application/pdf" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-          <div className="bg-red-50 dark:bg-red-900/20 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-            <Upload className="w-10 h-10 text-red-500" />
+          <input type="file" accept="application/pdf" multiple onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+          <div className="bg-blue-50 dark:bg-blue-900/20 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+            <Upload className="w-10 h-10 text-blue-500" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Drag & Drop your PDF here</h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md mx-auto">Upload any PDF document (invoices, contracts, research papers) to instantly extract text and generate AI-powered insights.</p>
-          <button className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-red-600/20">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Drag & Drop your PDFs here</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md mx-auto">Upload up to 10+ PDF documents (even &gt;50MB) to instantly extract text and generate AI-powered insights.</p>
+          <button className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-blue-600/20">
             Browse Files
           </button>
           
@@ -320,9 +356,9 @@ export default function PdfScannerApp() {
       {isProcessing && (
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 p-16 text-center flex flex-col items-center justify-center min-h-[400px]">
           <div className="relative w-24 h-24 mb-8">
-            <div className="absolute inset-0 border-4 border-red-100 dark:border-red-900/30 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-red-600 rounded-full border-t-transparent animate-spin"></div>
-            <Bot className="absolute inset-0 m-auto w-8 h-8 text-red-600" />
+            <div className="absolute inset-0 border-4 border-blue-100 dark:border-blue-900/30 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+            <Bot className="absolute inset-0 m-auto w-8 h-8 text-blue-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Analyzing Document</h2>
           <p className="text-gray-500 dark:text-gray-400 animate-pulse">{progressText}</p>
@@ -336,7 +372,7 @@ export default function PdfScannerApp() {
           <div className="lg:col-span-5 bg-gray-900 rounded-2xl overflow-hidden shadow-lg border border-gray-800 flex flex-col">
             <div className="bg-gray-800 px-4 py-3 flex justify-between items-center border-b border-gray-700">
               <div className="flex items-center text-gray-300 text-sm font-medium truncate">
-                <File className="w-4 h-4 mr-2 text-red-400" />
+                <File className="w-4 h-4 mr-2 text-blue-400" />
                 <span className="truncate max-w-[200px]">{file.name}</span>
               </div>
               <div className="flex space-x-2">
@@ -364,7 +400,7 @@ export default function PdfScannerApp() {
                 <button 
                   key={tab.id} 
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center px-6 py-4 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${activeTab === tab.id ? 'border-red-600 text-red-600 dark:text-red-400 bg-white dark:bg-gray-800' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                  className={`flex items-center px-6 py-4 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${activeTab === tab.id ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                 >
                   <tab.icon className="w-4 h-4 mr-2" /> {tab.label}
                 </button>
@@ -395,9 +431,30 @@ export default function PdfScannerApp() {
 
                       <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-5 border border-gray-100 dark:border-gray-700">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center">
-                          <Bot className="w-5 h-5 mr-2 text-red-500" /> Executive Summary
+                          <Bot className="w-5 h-5 mr-2 text-blue-500" /> Executive Summary
                         </h3>
                         <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{analysis.summary}</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Target Audience</h4>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{analysis.targetAudience}</p>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Document Language</h4>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{analysis.documentLanguage}</p>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Bias Detection</h4>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{analysis.biasDetection}</p>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Main Arguments</h4>
+                          <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300">
+                            {analysis.mainArguments.map((arg, i) => <li key={i}>{arg}</li>)}
+                          </ul>
+                        </div>
                       </div>
 
                       {analysis.actionItems.length > 0 && (
@@ -420,15 +477,64 @@ export default function PdfScannerApp() {
 
                   {/* Entities Tab */}
                   {activeTab === 'entities' && (
-                    <div className="space-y-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Key Entities Extracted</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {analysis.keyEntities.map((entity, i) => (
-                          <span key={i} className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/50 rounded-lg text-sm font-medium">
-                            {entity}
-                          </span>
-                        ))}
-                        {analysis.keyEntities.length === 0 && <p className="text-gray-500">No key entities detected.</p>}
+                    <div className="space-y-8">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Key Entities</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {analysis.keyEntities.map((entity, i) => (
+                            <span key={i} className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/50 rounded-lg text-sm font-medium">
+                              {entity}
+                            </span>
+                          ))}
+                          {analysis.keyEntities.length === 0 && <p className="text-gray-500 text-sm">No key entities detected.</p>}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <h3 className="text-md font-bold text-gray-900 dark:text-white mb-3">Statistical Data</h3>
+                          <ul className="space-y-1">
+                            {analysis.statisticalData.map((data, i) => <li key={i} className="text-sm text-gray-700 dark:text-gray-300 flex items-start"><span className="mr-2">•</span>{data}</li>)}
+                            {analysis.statisticalData.length === 0 && <li className="text-sm text-gray-500">None found.</li>}
+                          </ul>
+                        </div>
+                        <div>
+                          <h3 className="text-md font-bold text-gray-900 dark:text-white mb-3">Financial Figures</h3>
+                          <ul className="space-y-1">
+                            {analysis.financialFigures.map((fig, i) => <li key={i} className="text-sm text-gray-700 dark:text-gray-300 flex items-start"><span className="mr-2">•</span>{fig}</li>)}
+                            {analysis.financialFigures.length === 0 && <li className="text-sm text-gray-500">None found.</li>}
+                          </ul>
+                        </div>
+                        <div>
+                          <h3 className="text-md font-bold text-gray-900 dark:text-white mb-3">Dates & Deadlines</h3>
+                          <ul className="space-y-1">
+                            {analysis.datesAndDeadlines.map((date, i) => <li key={i} className="text-sm text-gray-700 dark:text-gray-300 flex items-start"><span className="mr-2">•</span>{date}</li>)}
+                            {analysis.datesAndDeadlines.length === 0 && <li className="text-sm text-gray-500">None found.</li>}
+                          </ul>
+                        </div>
+                        <div>
+                          <h3 className="text-md font-bold text-gray-900 dark:text-white mb-3">Contact Info</h3>
+                          <ul className="space-y-1">
+                            {analysis.contactInfo.map((info, i) => <li key={i} className="text-sm text-gray-700 dark:text-gray-300 flex items-start"><span className="mr-2">•</span>{info}</li>)}
+                            {analysis.contactInfo.length === 0 && <li className="text-sm text-gray-500">None found.</li>}
+                          </ul>
+                        </div>
+                        <div>
+                          <h3 className="text-md font-bold text-gray-900 dark:text-white mb-3">Technical Terms</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {analysis.technicalTerms.map((term, i) => (
+                              <span key={i} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">{term}</span>
+                            ))}
+                            {analysis.technicalTerms.length === 0 && <span className="text-sm text-gray-500">None found.</span>}
+                          </div>
+                        </div>
+                        <div>
+                          <h3 className="text-md font-bold text-gray-900 dark:text-white mb-3">Legal Clauses</h3>
+                          <ul className="space-y-1">
+                            {analysis.legalClauses.map((clause, i) => <li key={i} className="text-sm text-gray-700 dark:text-gray-300 flex items-start"><span className="mr-2">•</span>{clause}</li>)}
+                            {analysis.legalClauses.length === 0 && <li className="text-sm text-gray-500">None found.</li>}
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -475,9 +581,29 @@ export default function PdfScannerApp() {
                   {activeTab === 'chat' && (
                     <div className="flex flex-col h-full">
                       <div className="flex-1 overflow-y-auto mb-4 space-y-4 pr-2 custom-scrollbar">
+                        {chatHistory.length === 1 && analysis.suggestedQuestions.length > 0 && (
+                          <div className="mb-6">
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Suggested questions:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {analysis.suggestedQuestions.map((q, i) => (
+                                <button 
+                                  key={i}
+                                  onClick={() => {
+                                    setChatInput(q);
+                                    // Small delay to allow state update before sending
+                                    setTimeout(() => handleSendMessage(), 50);
+                                  }}
+                                  className="text-left px-3 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg text-sm transition-colors border border-blue-100 dark:border-blue-800/50"
+                                >
+                                  {q}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         {chatHistory.map((msg, idx) => (
                           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-red-600 text-white rounded-br-none' : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none'}`}>
+                            <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none'}`}>
                               <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                             </div>
                           </div>
@@ -500,12 +626,12 @@ export default function PdfScannerApp() {
                           onChange={(e) => setChatInput(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                           placeholder="Ask anything about this document..."
-                          className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-900 dark:text-white"
+                          className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
                         />
                         <button 
                           onClick={handleSendMessage}
                           disabled={isChatting || !chatInput.trim()}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
                         >
                           <Send className="w-4 h-4" />
                         </button>
@@ -518,10 +644,6 @@ export default function PdfScannerApp() {
                     <div className="h-full flex flex-col">
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white">Raw Extracted Text</h3>
-                        <button onClick={() => handleCopy(extractedText)} className="flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors">
-                          {copied ? <Check className="w-4 h-4 mr-2 text-emerald-500" /> : <Copy className="w-4 h-4 mr-2" />}
-                          {copied ? 'Copied!' : 'Copy Text'}
-                        </button>
                       </div>
                       <div className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 overflow-y-auto custom-scrollbar">
                         <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">{extractedText}</pre>
@@ -531,22 +653,6 @@ export default function PdfScannerApp() {
 
                 </motion.div>
               </AnimatePresence>
-            </div>
-
-            {/* Export Footer */}
-            <div className="bg-gray-50 dark:bg-gray-800/80 border-t border-gray-200 dark:border-gray-700 p-4 flex flex-wrap items-center justify-between gap-4">
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Export Results:</span>
-              <div className="flex space-x-2">
-                <button onClick={() => handleDownload('txt')} className="flex items-center px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors shadow-sm">
-                  <FileText className="w-4 h-4 mr-2 text-blue-500" /> TXT
-                </button>
-                <button onClick={() => handleDownload('md')} className="flex items-center px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors shadow-sm">
-                  <FileCode2 className="w-4 h-4 mr-2 text-purple-500" /> Markdown
-                </button>
-                <button onClick={() => handleDownload('json')} className="flex items-center px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors shadow-sm">
-                  <FileJson className="w-4 h-4 mr-2 text-amber-500" /> JSON
-                </button>
-              </div>
             </div>
 
           </div>
