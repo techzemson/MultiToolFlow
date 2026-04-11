@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as pdfjsLib from 'pdfjs-dist';
+// @ts-ignore
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import { GoogleGenAI } from '@google/genai';
 
@@ -41,13 +42,17 @@ interface ChatMessage {
 }
 
 export default function PdfScannerApp() {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [currentFileIndex, setCurrentFileIndex] = useState(-1);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressText, setProgressText] = useState('');
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'entities' | 'risks' | 'chat' | 'raw'>('overview');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [renderPages, setRenderPages] = useState<string[]>([]);
+  const [isRendering, setIsRendering] = useState(false);
   
   // Chat State
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -68,36 +73,52 @@ export default function PdfScannerApp() {
   }, [chatHistory]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile || selectedFile.type !== 'application/pdf') {
-      alert('Please upload a valid PDF file.');
+    const selectedFiles = Array.from(e.target.files || []).filter(f => (f as File).type === 'application/pdf') as File[];
+    if (selectedFiles.length === 0) {
+      alert('Please upload valid PDF files.');
       return;
     }
-    processFile(selectedFile);
+    const newFiles = [...files, ...selectedFiles].slice(0, 20); // Limit to 20
+    setFiles(newFiles);
+    if (currentFileIndex === -1) {
+      processFile(newFiles[0], 0);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const droppedFile = e.dataTransfer.files?.[0];
-    if (!droppedFile || droppedFile.type !== 'application/pdf') {
-      alert('Please drop a valid PDF file.');
+    const droppedFiles = Array.from(e.dataTransfer.files || []).filter(f => (f as File).type === 'application/pdf') as File[];
+    if (droppedFiles.length === 0) {
+      alert('Please drop valid PDF files.');
       return;
     }
-    processFile(droppedFile);
+    const newFiles = [...files, ...droppedFiles].slice(0, 20);
+    setFiles(newFiles);
+    if (currentFileIndex === -1) {
+      processFile(newFiles[0], 0);
+    }
   };
 
-  const processFile = async (selectedFile: File) => {
-    setFile(selectedFile);
+  const processFile = async (selectedFile: File, index: number) => {
+    setCurrentFileIndex(index);
     setPdfUrl(URL.createObjectURL(selectedFile));
     setIsProcessing(true);
     setAnalysis(null);
     setChatHistory([]);
     setActiveTab('overview');
+    setRenderPages([]);
 
     try {
-      setProgressText('Extracting text from PDF...');
-      const text = await extractTextFromPdf(selectedFile);
+      setProgressText('Extracting text and rendering preview...');
+      
+      // Run text extraction and rendering in parallel
+      const [text, pages] = await Promise.all([
+        extractTextFromPdf(selectedFile),
+        renderPdfPages(selectedFile)
+      ]);
+      
       setExtractedText(text);
+      setRenderPages(pages);
       
       // Calculate basic stats
       const words = text.trim().split(/\s+/).length;
@@ -112,6 +133,39 @@ export default function PdfScannerApp() {
       alert('Failed to process PDF. Please try again.');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const renderPdfPages = async (file: File): Promise<string[]> => {
+    setIsRendering(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const pages: string[] = [];
+      
+      // Render first 10 pages for preview to keep it fast
+      const pagesToRender = Math.min(pdf.numPages, 10);
+      
+      for (let i = 1; i <= pagesToRender; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        if (context) {
+          // @ts-ignore
+          await page.render({ canvasContext: context, viewport }).promise;
+          pages.push(canvas.toDataURL());
+        }
+      }
+      return pages;
+    } catch (err) {
+      console.error('Rendering error:', err);
+      return [];
+    } finally {
+      setIsRendering(false);
     }
   };
 
@@ -258,19 +312,20 @@ export default function PdfScannerApp() {
     let content = '';
     let mimeType = '';
     let extension = format;
+    const currentFile = files[currentFileIndex];
 
     if (format === 'txt') {
       content = extractedText;
       mimeType = 'text/plain';
     } else if (format === 'json') {
       content = JSON.stringify({
-        metadata: { wordCount, charCount, fileName: file?.name },
+        metadata: { wordCount, charCount, fileName: currentFile?.name },
         analysis,
         rawText: extractedText
       }, null, 2);
       mimeType = 'application/json';
     } else if (format === 'md') {
-      content = `# Document Analysis: ${file?.name}\n\n`;
+      content = `# Document Analysis: ${currentFile?.name}\n\n`;
       content += `## Classification\n${analysis?.classification}\n\n`;
       content += `## Summary\n${analysis?.summary}\n\n`;
       content += `## Key Entities\n${analysis?.keyEntities.map(e => `- ${e}`).join('\n')}\n\n`;
@@ -284,7 +339,7 @@ export default function PdfScannerApp() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `analysis_result.${extension}`;
+    a.download = `analysis_${currentFile?.name.replace('.pdf', '')}.${extension}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -292,12 +347,20 @@ export default function PdfScannerApp() {
   };
 
   const resetApp = () => {
-    setFile(null);
+    setFiles([]);
+    setCurrentFileIndex(-1);
     setPdfUrl(null);
     setExtractedText('');
     setAnalysis(null);
     setChatHistory([]);
+    setRenderPages([]);
   };
+
+  const currentFile = files[currentFileIndex];
+
+  const filteredText = extractedText.split('\n').filter(line => 
+    line.toLowerCase().includes(searchTerm.toLowerCase())
+  ).join('\n');
 
   return (
     <div className="max-w-[1600px] mx-auto pb-12 px-4 sm:px-6 lg:px-8">
@@ -312,14 +375,40 @@ export default function PdfScannerApp() {
             <p className="text-gray-600 dark:text-gray-400">Extract, analyze, and chat with any PDF document.</p>
           </div>
         </div>
-        {file && (
-          <button onClick={resetApp} className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition-colors">
-            <RefreshCw className="w-4 h-4 mr-2" /> Scan Another PDF
-          </button>
+        {files.length > 0 && (
+          <div className="flex items-center space-x-3">
+            <button onClick={resetApp} className="flex items-center px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 dark:text-red-400 dark:bg-red-900/20 rounded-lg transition-colors">
+              <X className="w-4 h-4 mr-2" /> Clear All
+            </button>
+            <button onClick={() => processFile(files[currentFileIndex], currentFileIndex)} className="flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 rounded-lg transition-colors">
+              <RefreshCw className={`w-4 h-4 mr-2 ${isProcessing ? 'animate-spin' : ''}`} /> Re-analyze
+            </button>
+          </div>
         )}
       </div>
 
-      {!file && !isProcessing && (
+      {!isProcessing && files.length > 0 && (
+        <div className="mb-6 flex overflow-x-auto pb-2 gap-3 custom-scrollbar">
+          {files.map((f, idx) => (
+            <button
+              key={idx}
+              onClick={() => processFile(f, idx)}
+              className={`flex items-center px-4 py-2 rounded-xl border whitespace-nowrap transition-all ${currentFileIndex === idx ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-blue-400'}`}
+            >
+              <File className={`w-4 h-4 mr-2 ${currentFileIndex === idx ? 'text-white' : 'text-blue-500'}`} />
+              <span className="text-sm font-medium truncate max-w-[150px]">{f.name}</span>
+              {currentFileIndex === idx && isProcessing && <Loader2 className="w-3 h-3 ml-2 animate-spin" />}
+            </button>
+          ))}
+          <label className="flex items-center px-4 py-2 rounded-xl border border-dashed border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-all whitespace-nowrap">
+            <Upload className="w-4 h-4 mr-2" />
+            <span className="text-sm font-medium">Add More</span>
+            <input type="file" accept="application/pdf" multiple onChange={handleFileUpload} className="hidden" />
+          </label>
+        </div>
+      )}
+
+      {files.length === 0 && !isProcessing && (
         <motion.div 
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border-2 border-dashed border-gray-300 dark:border-gray-700 p-12 text-center hover:border-blue-500 dark:hover:border-blue-500 transition-colors group relative"
@@ -365,23 +454,52 @@ export default function PdfScannerApp() {
         </div>
       )}
 
-      {file && !isProcessing && analysis && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-200px)] min-h-[800px]">
+      {currentFile && !isProcessing && analysis && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-250px)] min-h-[800px]">
           
           {/* Left Panel: PDF Preview */}
           <div className="lg:col-span-5 bg-gray-900 rounded-2xl overflow-hidden shadow-lg border border-gray-800 flex flex-col">
             <div className="bg-gray-800 px-4 py-3 flex justify-between items-center border-b border-gray-700">
               <div className="flex items-center text-gray-300 text-sm font-medium truncate">
                 <File className="w-4 h-4 mr-2 text-blue-400" />
-                <span className="truncate max-w-[200px]">{file.name}</span>
+                <span className="truncate max-w-[200px]">{currentFile.name}</span>
               </div>
               <div className="flex space-x-2">
                 <span className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">{wordCount.toLocaleString()} words</span>
-                <span className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                <span className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">{(currentFile.size / 1024 / 1024).toFixed(2)} MB</span>
               </div>
             </div>
-            <div className="flex-1 w-full bg-gray-100">
-              {pdfUrl && <iframe src={`${pdfUrl}#toolbar=0`} className="w-full h-full border-0" title="PDF Preview" />}
+            <div className="flex-1 w-full bg-gray-100 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+              {renderPages.length > 0 ? (
+                renderPages.map((page, idx) => (
+                  <div key={idx} className="relative shadow-xl rounded-lg overflow-hidden bg-white mx-auto max-w-full">
+                    <img src={page} alt={`Page ${idx + 1}`} className="w-full h-auto" referrerPolicy="no-referrer" />
+                    <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">
+                      Page {idx + 1}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-4">
+                  {isRendering ? (
+                    <>
+                      <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+                      <p className="text-sm font-medium">Rendering PDF pages...</p>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="w-12 h-12 text-amber-500" />
+                      <p className="text-sm font-medium">Preview unavailable. Try re-analyzing.</p>
+                      <button 
+                        onClick={() => processFile(currentFile, currentFileIndex)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold"
+                      >
+                        Retry Preview
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -642,11 +760,36 @@ export default function PdfScannerApp() {
                   {/* Raw Text Tab */}
                   {activeTab === 'raw' && (
                     <div className="h-full flex flex-col">
-                      <div className="flex justify-between items-center mb-4">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white">Raw Extracted Text</h3>
+                        <div className="relative w-full sm:w-64">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input 
+                            type="text" 
+                            placeholder="Search in text..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
                       </div>
                       <div className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 overflow-y-auto custom-scrollbar">
-                        <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">{extractedText}</pre>
+                        {searchTerm && filteredText === '' ? (
+                          <div className="h-full flex flex-col items-center justify-center text-gray-500">
+                            <Search className="w-8 h-8 mb-2 opacity-20" />
+                            <p className="text-sm">No matches found for "{searchTerm}"</p>
+                          </div>
+                        ) : (
+                          <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
+                            {searchTerm ? (
+                              filteredText.split(new RegExp(`(${searchTerm})`, 'gi')).map((part, i) => 
+                                part.toLowerCase() === searchTerm.toLowerCase() 
+                                  ? <mark key={i} className="bg-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-200 rounded-sm px-0.5">{part}</mark> 
+                                  : part
+                              )
+                            ) : extractedText}
+                          </pre>
+                        )}
                       </div>
                     </div>
                   )}
